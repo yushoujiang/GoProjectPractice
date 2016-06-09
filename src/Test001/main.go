@@ -5,6 +5,7 @@ import (
 	"fmt"
 	// "math"
 	"MyMath"
+	. "Pratice"
 )
 
 func main() {
@@ -123,6 +124,7 @@ func main() {
 	// switch findResult {
 	// case true:
 	// 	fmt.Println(ok)
+	// 	fallthrough
 	// 	break
 	// case false:
 	// 	fmt.Println(ok)
@@ -131,6 +133,106 @@ func main() {
 	// 	fmt.Println("impossible")
 	// 	break
 	// }
+
+	callShowArray := []int{1, 2, 3, 4, 5, 6, 7, 8, 9}
+
+	odd := showNeed(isOdd, callShowArray)
+
+	fmt.Println("odd is", odd)
+
+	even := showNeed(isEven, callShowArray)
+
+	fmt.Println("even is", even)
+
+	var soso PersonInfo
+	soso.id, soso.address, soso.name = "1", "abc", "soso"
+
+	yanyan := PersonInfo{id: "2", address: "bbc", name: "yanyan"}
+
+	may := PersonInfo{"3", "may", "def"}
+
+	fmt.Println(soso, yanyan, may)
+
+	student := Student{Human{"soso", 20, "abc"}, "five high school"}
+	employee := Employee{Human{"yu", 33, "bbc"}, "bianfeng"}
+
+	student.SayHi(1)
+	employee.SayHi(1)
+
+	student.SayHi(1)
+	employee.SayHi(1)
+
+	// var box Box
+
+	boxes := BoxList{
+		Box{4, 4, 4, Red},
+		Box{10, 10, 1, Yellow},
+		Box{1, 1, 20, Black},
+		Box{10, 10, 1, Blue},
+		Box{10, 30, 1, White},
+		Box{20, 20, 20, Yellow},
+	}
+
+	fmt.Println("getBiggestColor为", boxes.GetBiggestColor().ColorToString())
+}
+
+type Human struct {
+	name  string
+	age   int
+	phone string
+}
+
+type Student struct {
+	Human
+	school string
+}
+
+type Employee struct {
+	Human
+	company string
+}
+
+func (h *Human) SayHi(value int) (ret int) {
+	h.age += value
+	fmt.Printf("human method name=%s,age=%d,phone=%s \n", h.name, h.age, h.phone)
+	return h.age
+}
+
+func (e *Employee) SayHi(value int) (ret int) {
+	e.age += value
+	fmt.Printf("Employee method name=%s,age=%d,phone=%s \n", e.name, e.age, e.phone)
+	return e.age
+}
+
+type myFunction func(int) bool
+
+func showNeed(charge myFunction, lists []int) (ret []int) {
+
+	var result []int
+
+	for _, v := range lists {
+		if charge(v) {
+			result = append(result, v)
+		}
+	}
+	return result
+
+}
+
+func isOdd(value int) bool {
+
+	if value%2 == 0 {
+		return false
+	}
+
+	return true
+}
+
+func isEven(value int) bool {
+	if value%2 == 0 {
+		return true
+	}
+	return false
 }
 
 type Integer int
@@ -146,6 +248,16 @@ type PersonInfo struct {
 }
 
 func myPrint(printList ...interface{}) {
+
+	var a = [5]int{1, 2, 3, 4, 5}
+	b := a
+	a[2] = 8
+
+	fmt.Println(a, b)
+
+	c := &a
+	a[2] = 12
+	fmt.Println(a, *c)
 
 	for _, value := range printList {
 		switch value.(type) {
