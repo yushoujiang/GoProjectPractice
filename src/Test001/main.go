@@ -4,8 +4,10 @@ import (
 	"errors"
 	"fmt"
 	// "math"
-	"MyMath"
-	. "Pratice"
+	// "MyMath"
+	"GameLogDB"
+	// "Pratice"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 func main() {
@@ -75,51 +77,51 @@ func main() {
 	// 	fmt.Println(i, v)
 	// }
 
-	var myMap map[string]PersonInfo
-	myMap = make(map[string]PersonInfo, 100)
+	// var myMap map[string]PersonInfo
+	// myMap = make(map[string]PersonInfo, 100)
 
-	myMap2 := map[string]PersonInfo{
-		"game":  PersonInfo{"1", "soso1", "hangz"},
-		"game4": PersonInfo{"4", "soso2", "hangz"},
-	}
+	// myMap2 := map[string]PersonInfo{
+	// 	"game":  PersonInfo{"1", "soso1", "hangz"},
+	// 	"game4": PersonInfo{"4", "soso2", "hangz"},
+	// }
 
-	myMap["game1"] = PersonInfo{"2", "hehe", "hangzhou"}
-	myMap2["game2"] = PersonInfo{"3", "heihei", "hangzhou"}
+	// myMap["game1"] = PersonInfo{"2", "hehe", "hangzhou"}
+	// myMap2["game2"] = PersonInfo{"3", "heihei", "hangzhou"}
 
-	// delete(myMap, "game1")
-	findResult, ok := myMap["game1"]
-	if ok {
-		fmt.Println(findResult.id, findResult.name, findResult.address)
-	} else {
-		fmt.Println("can not find this")
-	}
+	// // delete(myMap, "game1")
+	// findResult, ok := myMap["game1"]
+	// if ok {
+	// 	fmt.Println(findResult.id, findResult.name, findResult.address)
+	// } else {
+	// 	fmt.Println("can not find this")
+	// }
 
-	result, err := addNum(1, -2)
+	// result, err := addNum(1, -2)
 
-	fmt.Println(result, err)
+	// fmt.Println(result, err)
 
-	MyMath.MySort(12, 25, 2, 8, 99, 16, 1)
+	// MyMath.MySort(12, 25, 2, 8, 99, 16, 1)
 
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Printf("runtime error caught: %v", r)
-			fmt.Println("")
-		}
-	}()
+	// defer func() {
+	// 	if r := recover(); r != nil {
+	// 		fmt.Printf("runtime error caught: %v", r)
+	// 		fmt.Println("")
+	// 	}
+	// }()
 
-	// myDefer()
+	// // myDefer()
 
-	defer fmt.Println("run here1?")
+	// defer fmt.Println("run here1?")
 
-	// showIntger(1, 2, 3, 4, 5)
+	// // showIntger(1, 2, 3, 4, 5)
 
-	myPrint(1, 2, "haha", 2.334)
+	// myPrint(1, 2, "haha", 2.334)
 
-	myFunc := func(x, y int) int {
-		return x + y
-	}
-	defer fmt.Println("run here2?")
-	fmt.Println(myFunc(1, 2))
+	// myFunc := func(x, y int) int {
+	// 	return x + y
+	// }
+	// defer fmt.Println("run here2?")
+	// fmt.Println(myFunc(1, 2))
 
 	// switch findResult {
 	// case true:
@@ -134,46 +136,60 @@ func main() {
 	// 	break
 	// }
 
-	callShowArray := []int{1, 2, 3, 4, 5, 6, 7, 8, 9}
+	// callShowArray := []int{1, 2, 3, 4, 5, 6, 7, 8, 9}
 
-	odd := showNeed(isOdd, callShowArray)
+	// odd := showNeed(isOdd, callShowArray)
 
-	fmt.Println("odd is", odd)
+	// fmt.Println("odd is", odd)
 
-	even := showNeed(isEven, callShowArray)
+	// even := showNeed(isEven, callShowArray)
 
-	fmt.Println("even is", even)
+	// fmt.Println("even is", even)
 
-	var soso PersonInfo
-	soso.id, soso.address, soso.name = "1", "abc", "soso"
+	// var soso PersonInfo
+	// soso.id, soso.address, soso.name = "1", "abc", "soso"
 
-	yanyan := PersonInfo{id: "2", address: "bbc", name: "yanyan"}
+	// yanyan := PersonInfo{id: "2", address: "bbc", name: "yanyan"}
 
-	may := PersonInfo{"3", "may", "def"}
+	// may := PersonInfo{"3", "may", "def"}
 
-	fmt.Println(soso, yanyan, may)
+	// fmt.Println(soso, yanyan, may)
 
-	student := Student{Human{"soso", 20, "abc"}, "five high school"}
-	employee := Employee{Human{"yu", 33, "bbc"}, "bianfeng"}
+	// student := Student{Human{"soso", 20, "abc"}, "five high school"}
+	// employee := Employee{Human{"yu", 33, "bbc"}, "bianfeng"}
 
-	student.SayHi(1)
-	employee.SayHi(1)
+	// student.SayHi(1)
+	// employee.SayHi(1)
 
-	student.SayHi(1)
-	employee.SayHi(1)
+	// student.SayHi(1)
+	// employee.SayHi(1)
 
-	// var box Box
+	// // var box Box
 
-	boxes := BoxList{
-		Box{4, 4, 4, Red},
-		Box{10, 10, 1, Yellow},
-		Box{1, 1, 20, Black},
-		Box{10, 10, 1, Blue},
-		Box{10, 30, 1, White},
-		Box{20, 20, 20, Yellow},
-	}
+	// boxes := BoxList{
+	// 	Box{4, 4, 4, Red},
+	// 	Box{10, 10, 1, Yellow},
+	// 	Box{1, 1, 20, Black},
+	// 	Box{10, 10, 1, Blue},
+	// 	Box{10, 30, 1, White},
+	// 	Box{20, 20, 20, Yellow},
+	// }
 
-	fmt.Println("getBiggestColor为", boxes.GetBiggestColor().ColorToString())
+	// fmt.Println("getBiggestColor为", boxes.GetBiggestColor().ColorToString())
+
+	// Pratice.StartCount()
+
+	// Pratice.CallTestFunc()
+
+	// Pratice.Dododo()
+
+	// Pratice.CallTestSelectFunc()
+
+	// Pratice.JsonTest001()
+
+	// Pratice.StartMyWebServer()
+
+	fmt.Println("s=", GameLogDB.GetSqlCommand("create_daily_log"))
 }
 
 type Human struct {
@@ -287,6 +303,7 @@ func addNum(a int, b int) (ret int, err error) {
 		err = errors.New("两个值都不能小于0")
 		return
 	}
+	fmt.Println("in addNum", a+b)
 
 	return a + b, nil
 

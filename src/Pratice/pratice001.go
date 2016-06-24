@@ -8,10 +8,11 @@ import (
 type myInt struct {
 	value int
 }
-baidufunc (a myInt) Less(b int) (ret bool) {
+
+func (a myInt) Less(b int) (ret bool) {
 	return a.value < b
 }
- 
+
 func (a *myInt) Add(b int) {
 	a.value += b
 }

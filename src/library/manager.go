@@ -52,7 +52,7 @@ func (m MusicManage) Find(name string) (retM *Music, err error) {
 	return nil, errors.New("not found in array")
 }
 
-func (m MusicManage) Add(music Music) {
+func (m *MusicManage) Add(music Music) {
 	m.musics = append(m.musics, music)
 }
 
