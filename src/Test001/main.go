@@ -7,7 +7,8 @@ import (
 	// "MyMath"
 	"GameLogDB"
 	// "Pratice"
-	_ "github.com/go-sql-driver/mysql"
+	"runtime"
+	"time"
 )
 
 func main() {
@@ -189,7 +190,18 @@ func main() {
 
 	// Pratice.StartMyWebServer()
 
-	fmt.Println("s=", GameLogDB.GetSqlCommand("create_daily_log"))
+	// fmt.Println("s=", GameLogDB.GetSqlCommand("create_daily_log"))
+
+	gamelog := GameLogDB.GetGameLogDB()
+	gamelog.QueryDB(GameLogDB.GetSqlCommand("create_daily_log"))
+
+	count := 200
+	for i := 0; i < count; i++ {
+		GameLogDB.Put(fmt.Sprintf("进没进来哦~%d", (i)))
+		runtime.Gosched()
+	}
+
+	time.Sleep(1e9 * 60)
 }
 
 type Human struct {
