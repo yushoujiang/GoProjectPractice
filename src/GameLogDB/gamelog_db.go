@@ -43,8 +43,8 @@ func log_save(records []string) {
 
 func (self *MySqlDb) connectDB() {
 	db, err := sql.Open("mysql", "root:@tcp(localhost:3306)/gamelog_t2?charset=utf8")
-	self.dbInstance = db
 	checkError(err)
+	self.dbInstance = db
 }
 
 func (self *MySqlDb) QueryDB(prepare string, exec ...string) {

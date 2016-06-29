@@ -7,8 +7,8 @@ import (
 	// "MyMath"
 	"GameLogDB"
 	// "Pratice"
-	"runtime"
-	"time"
+	// "runtime"
+	// "time"
 )
 
 func main() {
@@ -192,16 +192,17 @@ func main() {
 
 	// fmt.Println("s=", GameLogDB.GetSqlCommand("create_daily_log"))
 
-	gamelog := GameLogDB.GetGameLogDB()
-	gamelog.QueryDB(GameLogDB.GetSqlCommand("create_daily_log"))
+	GameLogDB.StartServer()
+	// gamelog := GameLogDB.GetGameLogDB()
+	// gamelog.QueryDB(GameLogDB.GetSqlCommand("create_daily_log"))
 
-	count := 200
-	for i := 0; i < count; i++ {
-		GameLogDB.Put(fmt.Sprintf("进没进来哦~%d", (i)))
-		runtime.Gosched()
-	}
+	// count := 200
+	// for i := 0; i < count; i++ {
+	// 	GameLogDB.Put(fmt.Sprintf("进没进来哦~%d", (i)))
+	// 	runtime.Gosched()
+	// }
 
-	time.Sleep(1e9 * 60)
+	// time.Sleep(1e9 * 60)
 }
 
 type Human struct {
