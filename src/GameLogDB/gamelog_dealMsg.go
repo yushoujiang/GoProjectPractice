@@ -1,22 +1,23 @@
 package GameLogDB
 
 import (
-	"fmt"
+	// "fmt"
 	"log"
 	"math/rand"
 	"strings"
 	"time"
 )
 
-const maxChanMsg int = 1024
+const maxChanMsg int = 100
 const maxChanCount int = 3
 
 var chanMsg []chan Message
 
 type Message struct {
-	chanid  byte      //编号id我看看的
-	logData string    //数据消息
-	channel chan byte //消息队列
+	chanid   byte //编号id
+	socketid uint
+	logData  string    //数据消息
+	channel  chan byte //消息队列
 }
 
 func init() {
@@ -30,41 +31,84 @@ func init() {
 const spliteString string = "\r\n\r\n"
 
 //分割解析字符串
-func spliteData(data []byte, connIndex uint16) []byte {
+func spliteData(data []byte, connIndex uint) []byte {
 
 	str := string(data)
 
-	log.Println("before spliteData:", str)
+	// log.Println("before spliteData:", str)
 
-	index := strings.Index(str, spliteString)
-	fmt.Println("find index:", index)
+	finalStr := strings.SplitAfter(str, spliteString)
+	//分割
+	strLen := len(finalStr) - 1
+	// log.Println("----------------------------strLen:", strLen)
+	if strLen < 1 {
+		return data
+	}
+	for i := 0; i < strLen-1; i++ {
+		// log.Println("----------------------------put:", finalStr[i])
+		go Put(finalStr[i], connIndex)
+	}
+	//最后一个判断下是否完整
+	// log.Println("----------------------------put last:", finalStr[strLen-1])
+	index := strings.Index(finalStr[strLen-1], spliteString)
+	// log.Println("find index:", index)
 	if index == -1 { //不全等下次一起
 		return data
 	} else {
-		message := string(data[:index])
-		log.Println("after spliteData:", message)
+		lastData := []byte(finalStr[strLen-1])
+		message := string(lastData[:index])
+		// log.Println("after spliteData:", message)
 		go Put(message, connIndex)
 
 		//剩余内容返回
 
 		leftStartIndex := index + len(spliteString)
-		trueLen := len(data)
-		log.Println("leftStartIndex:", leftStartIndex, ",", "trueLen:", trueLen)
+		trueLen := len(lastData)
+		// log.Println("leftStartIndex:", leftStartIndex, ",", "trueLen:", trueLen)
 		if leftStartIndex == trueLen {
 
 		} else if leftStartIndex < trueLen {
-			return data[leftStartIndex:trueLen]
+			return lastData[leftStartIndex:trueLen]
 		}
 	}
 	return make([]byte, 0)
 }
 
+// func spliteData(data []byte, connIndex uint) []byte {
+
+// 	str := string(data)
+
+// 	// log.Println("before spliteData:", str)
+
+// 	index := strings.Index(str, spliteString)
+// 	// log.Println("find index:", index)
+// 	if index == -1 { //不全等下次一起
+// 		return data
+// 	} else {
+// 		message := string(data[:index])
+// 		// log.Println("after spliteData:", message)
+// 		go Put(message, connIndex)
+
+// 		//剩余内容返回
+
+// 		leftStartIndex := index + len(spliteString)
+// 		trueLen := len(data)
+// 		log.Println("leftStartIndex:", leftStartIndex, ",", "trueLen:", trueLen)
+// 		if leftStartIndex == trueLen {
+
+// 		} else if leftStartIndex < trueLen {
+// 			return data[leftStartIndex:trueLen]
+// 		}
+// 	}
+// 	return make([]byte, 0)
+// }
+
 //从socket里读取到的数据入队列
-func Put(msg string, connIndex uint16) {
+func Put(msg string, connIndex uint) {
 
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	var id byte = byte(r.Intn(maxChanCount))
-	dataStruct := Message{chanid: id, logData: msg, channel: make(chan byte)}
+	dataStruct := Message{chanid: id, logData: msg, channel: make(chan byte), socketid: connIndex}
 
 	chanMsg[id] <- dataStruct
 
@@ -83,7 +127,7 @@ func Run(msg chan Message) {
 
 		select {
 		case message := <-msg:
-			dispatchLog(message)
+			go dispatchLog(message)
 			// fmt.Println("入库", message.logData)
 		case <-timeout:
 			// fmt.Println("呵呵超时了")
@@ -99,32 +143,35 @@ func DataFromSocket(msg string) {
 	go dispatchLog(dataStruct)
 }
 
+//按照规则切割流里的数据内容
 func dispatchLog(data Message) {
 	message := data.logData
 	finalStr := strings.TrimSpace(message)
-	fmt.Printf("inDispatchLog[%d]=%s\r\n", data.chanid, finalStr)
-	// if strings.HasPrefix(finalStr, "INFO") {
+	log.Printf("socket[%d],dispatchLog[%d]=%s\r\n", data.socketid, data.chanid, finalStr)
 
-	// 	//先在这里处理消息吧
-	// 	records := strings.Split(message, "\t")
-	// 	if records == nil || len(records) < 6 {
-	// 		return
-	// 	}
-	// 	//消息内容具体处理
+	if strings.HasPrefix(finalStr, "INFO") {
 
-	// 	if strings.Contains(records[5], "remain_record"); len(records) >= 7 {
-	// 		// self.login_msg(record)
-	// 	} else if strings.Contains(records[5], "recharge_successful"); len(records) >= 7 {
-	// 		// self.recharge_msg(record)
-	// 		// self.log_save(record)
-	// 	} else if strings.Contains(records[5], "poll"); len(records) >= 7 {
+		//先在这里处理消息吧
+		records := strings.Split(message, "\t")
+		log.Printf("len(records) :%d\r\n", len(records))
+		if records == nil || len(records) < 6 {
+			return
+		}
+		log.Println("run here?   1")
+		if strings.Contains(records[5], "remain_record"); len(records) >= 7 {
+			// self.login_msg(record)
+		} else if strings.Contains(records[5], "recharge_successful"); len(records) >= 7 {
+			// self.recharge_msg(record)
+			// self.log_save(record)
+		} else if strings.Contains(records[5], "poll"); len(records) >= 7 {
 
-	// 	} else {
-	// 		log_save(records)
-	// 	}
+		} else {
+			log.Println("run here?   2")
+			log_save(records)
+		}
 
-	// } else if strings.HasPrefix(finalStr, "ERROR") {
+	} else if strings.HasPrefix(finalStr, "ERROR") {
 
-	// }
+	}
 
 }

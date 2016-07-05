@@ -3,9 +3,11 @@ package GameLogDB
 import (
 	"database/sql"
 	//	"fmt"
+	"log"
 	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/novalagung/golpal"
 )
 
 type MySqlDb struct {
@@ -38,6 +40,28 @@ func log_save(records []string) {
 	if strings.EqualFold(action, "cust_event") {
 		return
 	}
+
+	data, error := golpal.New().Execute(strings.TrimSpace(records[6]))
+	if error != nil {
+		log.Println("log_save error:", error)
+	}
+	day_time := strings.Split(strings.TrimSpace(records[1]), ",")[0]
+	user_id := strings.Split(strings.TrimSpace(records[4]), ":")[1]
+	if len(records) > 8 {
+		// channel := strings.TrimSpace(records[7])
+	} else {
+		// channel :=
+	}
+
+	if len(user_id) <= 0 {
+		user_id = "0"
+	}
+	date := strings.Replace(day_time, "-", "", -1)
+
+	log.Println("data:", data)
+	log.Println("day_time:", day_time)
+	log.Println("user_id:", user_id)
+	log.Println("date:", date)
 
 }
 
@@ -75,6 +99,7 @@ func (self *MySqlDb) QueryDB(prepare string, exec ...string) {
 
 func checkError(err error) {
 	if err != nil {
+		log.Println("err:", err)
 		panic(err)
 	}
 }
