@@ -20,6 +20,14 @@ func init() {
 	gameSocketIndex = 0
 }
 
+// func readerSplit(channel chan int) {
+// 	for {
+// 		select {
+// 		case data := <-channel:
+// 		}
+// 	}
+// }
+
 //处理每一个连接
 func handleConnection(con GameConnect) {
 	log.Println(con.connect.RemoteAddr().String(), " connect successful,index:", con.index)
@@ -31,6 +39,9 @@ func handleConnection(con GameConnect) {
 
 	readerBuffer := make([]byte, 1024) //默认单条4K数据
 	leftBuffer := make([]byte, 0)
+
+	// readerChannel := make(chan int, 1)
+	// go readerSplit(readerSplit(channel))
 
 	for {
 		n, err := con.connect.Read(readerBuffer)

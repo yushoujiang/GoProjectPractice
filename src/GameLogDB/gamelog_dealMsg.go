@@ -2,7 +2,7 @@ package GameLogDB
 
 import (
 	// "fmt"
-	"log"
+	// "log"
 	"math/rand"
 	"strings"
 	"time"
@@ -31,44 +31,73 @@ func init() {
 const spliteString string = "\r\n\r\n"
 
 //分割解析字符串
+// func spliteData(data []byte, connIndex uint) []byte {
+
+// 	str := string(data)
+
+// 	log.Println(connIndex, "----------------------------before spliteData:", str)
+
+// 	finalStr := strings.SplitAfter(str, spliteString)
+// 	//分割
+// 	strLen := len(finalStr) - 1
+// 	log.Println(connIndex, "----------------------------strLen:", strLen)
+// 	if strLen-1 < 0 {
+// 		return data
+// 	}
+// 	for i := 0; i < strLen-1; i++ {
+// 		log.Println(connIndex, "----------------------------put:", finalStr[i])
+// 		go Put(finalStr[i], connIndex)
+// 	}
+// 	//最后一个判断下是否完整
+// 	log.Println(connIndex, "----------------------------put last:", finalStr[strLen-1])
+// 	index := strings.Index(finalStr[strLen-1], spliteString)
+// 	log.Println(connIndex, "----------------------------find index:", index)
+// 	if index == -1 { //不全等下次一起
+// 		return data
+// 	} else {
+// 		lastData := []byte(finalStr[strLen-1])
+// 		message := string(lastData[:index])
+// 		// log.Println("after spliteData:", message)
+// 		go Put(message, connIndex)
+
+// 		//剩余内容返回
+
+// 		leftStartIndex := index + len(spliteString)
+// 		trueLen := len(lastData)
+// 		// log.Println("leftStartIndex:", leftStartIndex, ",", "trueLen:", trueLen)
+// 		if leftStartIndex == trueLen {
+
+// 		} else if leftStartIndex < trueLen {
+// 			return lastData[leftStartIndex:trueLen]
+// 		}
+// 	}
+// 	return make([]byte, 0)
+// }
+
 func spliteData(data []byte, connIndex uint) []byte {
 
 	str := string(data)
 
-	// log.Println("before spliteData:", str)
+	// log.Println(connIndex, "----------------------------before spliteData:", str)
 
-	finalStr := strings.SplitAfter(str, spliteString)
-	//分割
-	strLen := len(finalStr) - 1
-	// log.Println("----------------------------strLen:", strLen)
-	if strLen < 1 {
-		return data
-	}
-	for i := 0; i < strLen-1; i++ {
-		// log.Println("----------------------------put:", finalStr[i])
-		go Put(finalStr[i], connIndex)
-	}
-	//最后一个判断下是否完整
-	// log.Println("----------------------------put last:", finalStr[strLen-1])
-	index := strings.Index(finalStr[strLen-1], spliteString)
-	// log.Println("find index:", index)
+	index := strings.Index(str, spliteString)
+	// log.Println(connIndex, "----------------------------find index:", index)
 	if index == -1 { //不全等下次一起
 		return data
 	} else {
-		lastData := []byte(finalStr[strLen-1])
-		message := string(lastData[:index])
-		// log.Println("after spliteData:", message)
+		message := string(data[:index])
+		// log.Println(connIndex, "----------------------------after spliteData:", message)
 		go Put(message, connIndex)
 
 		//剩余内容返回
 
 		leftStartIndex := index + len(spliteString)
-		trueLen := len(lastData)
+		trueLen := len(data)
 		// log.Println("leftStartIndex:", leftStartIndex, ",", "trueLen:", trueLen)
 		if leftStartIndex == trueLen {
 
 		} else if leftStartIndex < trueLen {
-			return lastData[leftStartIndex:trueLen]
+			return spliteData(data[leftStartIndex:trueLen], connIndex)
 		}
 	}
 	return make([]byte, 0)
@@ -108,7 +137,7 @@ func Put(msg string, connIndex uint) {
 
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	var id byte = byte(r.Intn(maxChanCount))
-	dataStruct := Message{chanid: id, logData: msg, channel: make(chan byte), socketid: connIndex}
+	dataStruct := Message{chanid: id, logData: strings.TrimSpace(msg), channel: make(chan byte), socketid: connIndex}
 
 	chanMsg[id] <- dataStruct
 
@@ -147,26 +176,31 @@ func DataFromSocket(msg string) {
 func dispatchLog(data Message) {
 	message := data.logData
 	finalStr := strings.TrimSpace(message)
-	log.Printf("socket[%d],dispatchLog[%d]=%s\r\n", data.socketid, data.chanid, finalStr)
+	// finalStr = stri  ngs.Replace(finalStr, "\t", "9998", -1)
+
+	// log.Printf("socket[%d],dispatchLog[%d]=%s\r\n", data.socketid, data.chanid, finalStr)
+	// log.Println("")
 
 	if strings.HasPrefix(finalStr, "INFO") {
 
+		// log.Printf("socket[%d],dispatchLog[%d]=%s\r\n", data.socketid, data.chanid, finalStr)
+
 		//先在这里处理消息吧
 		records := strings.Split(message, "\t")
-		log.Printf("len(records) :%d\r\n", len(records))
+		// for k, v := range records {
+		// 	log.Printf("records[%d]=%s\r\n", k, v)
+		// }
+		// log.Printf("len(records) :%d\r\n", len(records))
 		if records == nil || len(records) < 6 {
 			return
 		}
-		log.Println("run here?   1")
-		if strings.Contains(records[5], "remain_record"); len(records) >= 7 {
+		if strings.Contains(records[5], "remain_record") && len(records) >= 7 {
 			// self.login_msg(record)
-		} else if strings.Contains(records[5], "recharge_successful"); len(records) >= 7 {
+		} else if strings.Contains(records[5], "recharge_successful") && len(records) >= 7 {
 			// self.recharge_msg(record)
 			// self.log_save(record)
-		} else if strings.Contains(records[5], "poll"); len(records) >= 7 {
-
+		} else if strings.Contains(records[5], "poll") && len(records) >= 7 {
 		} else {
-			log.Println("run here?   2")
 			log_save(records)
 		}
 

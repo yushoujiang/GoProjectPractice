@@ -3,11 +3,14 @@ package GameLogDB
 import (
 	"database/sql"
 	//	"fmt"
+	"MyUtility"
+	"encoding/json"
 	"log"
+	"strconv"
 	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/novalagung/golpal"
+	// "github.com/novalagung/golpal"
 )
 
 type MySqlDb struct {
@@ -41,16 +44,24 @@ func log_save(records []string) {
 		return
 	}
 
-	data, error := golpal.New().Execute(strings.TrimSpace(records[6]))
+	//对python传过来的数据处理下
+	needToJson := strings.TrimSpace(records[6])
+	needToJson = strings.Replace(needToJson, "'", "\"", -1)
+	needToJson = strings.Replace(needToJson, "u\"", "", -1)
+	// log.Println("needToJson=", needToJson)
+
+	data := make(map[string]interface{})
+	error := json.Unmarshal([]byte(needToJson), &data)
 	if error != nil {
 		log.Println("log_save error:", error)
 	}
 	day_time := strings.Split(strings.TrimSpace(records[1]), ",")[0]
 	user_id := strings.Split(strings.TrimSpace(records[4]), ":")[1]
+	var channel string = ""
 	if len(records) > 8 {
-		// channel := strings.TrimSpace(records[7])
+		channel = strings.TrimSpace(records[7])
 	} else {
-		// channel :=
+		channel = MyUtility.GetMapRetString(data, "channel", "unknow123")
 	}
 
 	if len(user_id) <= 0 {
@@ -58,10 +69,42 @@ func log_save(records []string) {
 	}
 	date := strings.Replace(day_time, "-", "", -1)
 
+	//开始数据分析啦
+
+	//服装
+	cloth := make([]string, 0)
+	tempCloth := MyUtility.GetMapWithDefault(data, "cloth", make(map[string]interface{}, 0)).(map[string]interface{})
+	mapcloth_len := len(tempCloth)
+	if mapcloth_len > 0 {
+		// log.Println("cloth_len:", cloth_len)
+		for k, v := range tempCloth {
+			// log.Println("k:", k)
+			// log.Println("v:", v)
+			num := MyUtility.GetMapRetInt(v.(map[string]interface{}), "num", 0)
+			// log.Println("num:", num)
+			cloth_id, err := strconv.Atoi(k)
+			if err == nil {
+				cloth = append(cloth, strconv.Itoa(cloth_id*1000+num))
+			} else {
+				log.Println("strconv.Atoi err:", err)
+			}
+		}
+
+		cloth_len := len(cloth)
+		if cloth_len > 0 {
+			data["num"] = cloth[cloth_len-1]
+			cloth = cloth[:cloth_len-1]
+		}
+	}
+
+	//道具
+
 	log.Println("data:", data)
 	log.Println("day_time:", day_time)
-	log.Println("user_id:", user_id)
 	log.Println("date:", date)
+	log.Println("user_id:", user_id)
+	log.Println("channel:", channel)
+	log.Println("cloth:", cloth)
 
 }
 
