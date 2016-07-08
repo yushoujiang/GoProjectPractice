@@ -1,11 +1,12 @@
 package GameLogDB
 
 import (
-	"database/sql"
-	//	"fmt"
 	"MyUtility"
+	"database/sql"
 	"encoding/json"
+	// "fmt"
 	"log"
+	// "reflect"
 	"strconv"
 	"strings"
 
@@ -32,12 +33,6 @@ func GetGameLogDB() *MySqlDb {
 	return mysqldb
 }
 
-// message = message.strip()
-//        if message[:4] == 'INFO':
-//            # "INFO 2015-11-30 10:49:15,677  10.224.32.84  /getmailaward uid: 93  mail_award
-//            # {'other': {'mailid': 11111301}, u'prop': {u'3020006': 1, u'3020011': 1}}
-//            //"INFO   2015-12-30 11:25:54,170       127.0.0.1 /takedailyachievement   uid:  1905  takedailyachievement    {'other': {'daily_acv_id': 5007029}}
-
 func log_save(records []string) {
 	action := strings.TrimSpace(records[5])
 	if strings.EqualFold(action, "cust_event") {
@@ -54,6 +49,7 @@ func log_save(records []string) {
 	error := json.Unmarshal([]byte(needToJson), &data)
 	if error != nil {
 		log.Println("log_save error:", error)
+		log.Println("err needToJson:", needToJson)
 	}
 	day_time := strings.Split(strings.TrimSpace(records[1]), ",")[0]
 	user_id := strings.Split(strings.TrimSpace(records[4]), ":")[1]
@@ -92,19 +88,76 @@ func log_save(records []string) {
 
 		cloth_len := len(cloth)
 		if cloth_len > 0 {
-			data["num"] = cloth[cloth_len-1]
+			data["cloth"] = cloth[cloth_len-1]
 			cloth = cloth[:cloth_len-1]
 		}
 	}
 
 	//道具
+	prop := make([]string, 0)
+	prop_len := 0
+	tempProp := MyUtility.GetMapWithDefault(data, "prop", make(map[string]interface{}, 0)).(map[string]interface{})
+	maptempProp_len := len(tempProp)
+	if maptempProp_len > 0 {
+		for k, v := range tempProp {
+			// log.Println("k:", k)
+			// log.Println("v:", v)
+			if len(strings.TrimSpace(k)) > 0 {
+				prop = append(prop, strconv.Itoa(MyUtility.GetSum(MyUtility.GetString2Int(k)*1000, v)))
+			}
+		}
 
-	log.Println("data:", data)
+		prop_len = len(prop)
+		if prop_len > 0 {
+			data["prop"] = prop[prop_len-1]
+			prop = prop[:prop_len-1]
+		}
+	}
+
+	log.Println("before filter data:", data)
+	//删除非log表字段数据
+	unfields := make([]string, 0)
+	for k, _ := range data {
+		if MyUtility.ContainInTarget(k, mysqldb.log_fields) {
+			log.Println(k, "is in log_fields")
+		} else {
+			unfields = append(unfields, k)
+		}
+	}
+	for _, v := range unfields {
+		log.Println("delete ", v, " in data")
+		delete(data, v)
+	}
+
+	//sql语句拼接
+	pre_values := []string{strings.TrimSpace(user_id), strings.TrimSpace(action), strings.TrimSpace(day_time), strings.TrimSpace(channel)}
+	pre_columns := []string{"user_id", "action", "time", "channel"}
+
+	colums := strings.Join(append(pre_columns, MyUtility.GetAllMapKey(data)...), ",")
+	values := strings.Join(append(pre_values, MyUtility.GetAllMapValue(data)...), ",")
+
+	if len(colums) > 0 {
+		prepare := "INSERT INTO log_=? (=?)VALUE (=?)"
+		finaExe := make([]string, 0)
+		// finaExe = append(finaExe, date)
+		finaExe = append(finaExe, "dialy")
+		finaExe = append(finaExe, ",")
+		finaExe = append(finaExe, colums)
+		finaExe = append(finaExe, ",")
+		finaExe = append(finaExe, values)
+		mysqldb.QueryDB(prepare, finaExe...)
+	}
+
+	log.Println("after filter data:", data)
 	log.Println("day_time:", day_time)
 	log.Println("date:", date)
 	log.Println("user_id:", user_id)
 	log.Println("channel:", channel)
 	log.Println("cloth:", cloth)
+	log.Println("prop:", prop)
+	log.Println("colums:", colums)
+	log.Println("values:", values)
+	log.Println("----------------------------------------------------")
 
 }
 
@@ -132,9 +185,17 @@ func (self *MySqlDb) QueryDB(prepare string, exec ...string) {
 		_, err := self.dbInstance.Query(prepare)
 		checkError(err)
 	} else {
-		_, err := self.dbInstance.Prepare(prepare)
+
+		log.Println("prepare:", prepare)
+		str := strings.Join(exec, ",")
+		log.Println("exec:", exec)
+
+		stmt, err := self.dbInstance.Prepare(prepare)
 		checkError(err)
-		_, err = self.dbInstance.Exec("123")
+		res, err := stmt.Exec(str)
+		checkError(err)
+		id, err := res.LastInsertId()
+		log.Println("QueryDB LastInsertId:", id)
 		checkError(err)
 	}
 
