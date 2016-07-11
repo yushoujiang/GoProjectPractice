@@ -7,32 +7,58 @@ import (
 	"strconv"
 )
 
+func GetIntMax(numList ...int) int {
+	max := 0
+	for _, v := range numList {
+		if v > max {
+			max = v
+		}
+	}
+	return max
+}
+
 func GetAllMapKey(obj map[string]interface{}) []string {
 	keyList := make([]string, 0)
-	for _, k := range reflect.ValueOf(obj).MapKeys() {
-		keyList = append(keyList, k.String())
+	// for _, k := range reflect.ValueOf(obj).MapKeys() {
+	// 	keyList = append(keyList, k.String())
+	// }
+	for k, _ := range obj {
+		keyList = append(keyList, k)
 	}
 	return keyList
+}
+
+func GetAllMapValueOrderByKey(obj map[string]interface{}, keyList []string) []string {
+	valueList := make([]string, 0)
+
+	for _, v := range keyList {
+		valueList = append(valueList, GetMapRetString(obj, v, "no value error"))
+	}
+	return valueList
+}
+
+func changeInterfaceToString(v interface{}) string {
+	switch reflect.TypeOf(v).Kind() {
+	case reflect.Map:
+		arr, err := json.Marshal(v)
+		if err != nil {
+			log.Println("GetAllMapValue err:", err)
+		} else {
+			return string(arr)
+		}
+	case reflect.Float64:
+		return strconv.FormatFloat(v.(float64), 'f', -1, 64)
+	case reflect.String:
+		return v.(string)
+	}
+	return "type not match"
 }
 
 func GetAllMapValue(obj map[string]interface{}) []string {
 	valueList := make([]string, 0)
 
 	for _, v := range obj {
-
-		switch reflect.TypeOf(v).Kind() {
-		case reflect.Map:
-			arr, err := json.Marshal(v)
-			if err != nil {
-				log.Println("GetAllMapValue err:", err)
-			} else {
-				valueList = append(valueList, string(arr))
-			}
-		case reflect.Float64:
-			valueList = append(valueList, strconv.FormatFloat(v.(float64), 'f', -1, 64))
-		case reflect.String:
-			valueList = append(valueList, v.(string))
-		}
+		valueList = append(valueList, changeInterfaceToString(v))
 	}
 
 	return valueList
@@ -117,15 +143,5 @@ func GetMapRetInt(mapValue map[string]interface{}, key string, defaultValue inte
 func GetMapRetString(mapValue map[string]interface{}, key string, defaultValue interface{}) string {
 
 	tempValue := GetMapWithDefault(mapValue, key, defaultValue)
-	ret, ok := tempValue.(string)
-	if ok {
-		return ret
-	} else {
-		ret, ok = defaultValue.(string)
-		if ok {
-			return ret
-		} else {
-			return "get error"
-		}
-	}
+	return changeInterfaceToString(tempValue)
 }
