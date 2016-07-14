@@ -2,9 +2,11 @@ package MyUtility
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
 func GetIntMax(numList ...int) int {
@@ -121,22 +123,32 @@ func GetMapWithDefault(mapValue map[string]interface{}, key string, defaultValue
 	}
 }
 
-func GetMapRetInt(mapValue map[string]interface{}, key string, defaultValue interface{}) int {
+func GetMapRetInt(mapValue map[string]interface{}, key string, defaultValue interface{}) int64 {
 
 	tempValue := GetMapWithDefault(mapValue, key, defaultValue)
 	// log.Println("type=", reflect.TypeOf(tempValue))
 
-	ret, ok := tempValue.(float64)
-	if ok {
-		var value int = int(ret)
-		return value
-	} else {
-		newRet, success := defaultValue.(int)
+	chargeDefault := func(defaultValue interface{}) int64 {
+		newRet, success := defaultValue.(int64)
 		if success {
 			return newRet
 		} else {
 			return 0
 		}
+	}
+
+	ret, ok := tempValue.(float64)
+	if ok {
+		s := fmt.Sprintf("%.0f", ret)
+
+		value, err := strconv.ParseInt(s, 10, 64)
+		if err != nil {
+			return chargeDefault(defaultValue)
+		}
+
+		return value
+	} else {
+		return chargeDefault(defaultValue)
 	}
 }
 
@@ -144,4 +156,22 @@ func GetMapRetString(mapValue map[string]interface{}, key string, defaultValue i
 
 	tempValue := GetMapWithDefault(mapValue, key, defaultValue)
 	return changeInterfaceToString(tempValue)
+}
+
+func DealJsonFormat(target string) (map[string]interface{}, error) {
+	//对python传过来的数据处理下
+	needToJson := strings.TrimSpace(target)
+	needToJson = strings.Replace(needToJson, "'", "\"", -1)
+	needToJson = strings.Replace(needToJson, "u\"", "\"", -1)
+	// log.Println("needToJson=", needToJson)
+
+	data := make(map[string]interface{})
+	toJsonErr := json.Unmarshal([]byte(needToJson), &data)
+	if toJsonErr != nil {
+		log.Println("DealJsonFormat error:", toJsonErr)
+		log.Println("err needToJson:", needToJson)
+		return data, toJsonErr
+	} else {
+		return data, nil
+	}
 }

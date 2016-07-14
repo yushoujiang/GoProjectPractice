@@ -3,12 +3,13 @@ package GameLogDB
 import (
 	"MyUtility"
 	"database/sql"
-	"encoding/json"
+	// "encoding/json"
 	"fmt"
 	"log"
 	// "reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	// "github.com/novalagung/golpal"
@@ -27,10 +28,137 @@ func init() {
 		"id", "user_id", "channel", "action", "time", "diamond",
 		"coin", "attr", "achievepoint", "hp", "exp", "vip_point",
 		"honor", "prop", "cloth", "other", "player"}
+
+	//creat table
+	mysqldb.ExecDB(GetSqlCommand("create_log_login_detail"))
+	mysqldb.ExecDB(GetSqlCommand("create_login_log"))
+	mysqldb.ExecDB(GetSqlCommand("create_retention_log"))
 }
 
 func GetGameLogDB() *MySqlDb {
 	return mysqldb
+}
+
+func recharge_msg(records []string) {
+
+	dmsg, _ := MyUtility.DealJsonFormat(records[6])
+	day_time := strings.Split(strings.TrimSpace(records[1]), ",")[0]
+	username := MyUtility.GetMapRetString(dmsg, "username", "")
+	channel := strings.TrimSpace(records[7])
+	total := MyUtility.GetMapRetString(dmsg, "total", "0")
+	level := MyUtility.GetMapRetString(dmsg, "level", "0")
+	viplevel := MyUtility.GetMapRetString(dmsg, "vip_level", "0")
+	num := MyUtility.GetMapRetString(dmsg, "num", "0")
+
+	//把新的总充值额和新的单日充值额存入数据库
+	detail_sql := fmt.Sprintf("INSERT INTO `recharge_details` (`username`,`channel`,`level`,`viplevel`,`num`,`day_time`)"+
+		"VALUE ('%s', '%s', %s, %s, %s, '%s')", username, channel, level, viplevel, num, day_time)
+
+	total_sql := fmt.Sprintf("REPLACE INTO `recharge_total` (`username`,`channel`,`total_num`) VALUE ('%s', '%s', '%s')", username, channel, total)
+
+	mysqldb.ExecDB(detail_sql)
+	mysqldb.ExecDB(total_sql)
+
+}
+
+func login_msg(records []string) {
+
+	user_id := strings.Split(strings.TrimSpace(records[4]), ":")[1]
+	dmsg, _ := MyUtility.DealJsonFormat(records[6])
+
+	log.Println("user_id:", user_id)
+	log.Println("dmsg:", dmsg)
+
+	last_time := time.Unix(MyUtility.GetMapRetInt(dmsg, "last", 0), 0)
+	first_time := time.Unix(MyUtility.GetMapRetInt(dmsg, "first", 0), 0)
+
+	last := last_time.Format("2006-01-02 15:04:05")
+	first := first_time.Format("2006-01-02 15:04:05")
+
+	last_day := last_time.Format("2006-01-02")
+	first_day := first_time.Format("2006-01-02")
+
+	level := MyUtility.GetMapRetString(dmsg, "level", "0")
+	viplevel := MyUtility.GetMapRetString(dmsg, "vip_level", "0")
+	channel := strings.TrimSpace(records[7])
+
+	sql := fmt.Sprintf("INSERT INTO log_login_detail VALUE ('%s', '%s', '%s', %s, %s, '%s', '%s')",
+		user_id, channel, MyUtility.GetMapRetString(dmsg, "dbid", ""), level, viplevel, last, first)
+
+	mysqldb.ExecDB(sql)
+
+	sql = "SELECT lastdate, firstdate FROM log_users_login where username ='" +
+		MyUtility.GetMapRetString(dmsg, "username", "") + "'"
+
+	row := mysqldb.QueryDB(sql)
+	rowFlag := false
+	var rowValue_lastdate string = ""
+	var rowValue_firstdate string = ""
+	if row != nil {
+		for row.Next() {
+			row.Scan(&rowValue_lastdate, &rowValue_firstdate)
+			log.Println("rowValue_lastdate:", rowValue_lastdate)
+			log.Println("rowValue_firstdate:", rowValue_firstdate)
+			rowFlag = strings.EqualFold(rowValue_lastdate, last_day)
+		}
+	}
+
+	if row == nil || rowFlag == false {
+		sql = fmt.Sprintf("INSERT INTO log_users_login(username , cnt, lastdate, firstdate) SELECT '"+
+			MyUtility.GetMapRetString(dmsg, "username", "")+"',1, '%s', '%s'", last_day, first_day)
+		sql += "ON DUPLICATE KEY UPDATE cnt=1, lastdate=date(now())"
+
+		mysqldb.ExecDB(sql)
+		daycnt := last_time.Day() - first_time.Day()
+		log.Println("daycnt:", daycnt)
+		sql = "INSERT INTO log_retention_users(daytime,dbid,cid,first,second," +
+			"third,fourth, fifth, sixth,week,halfmonth," +
+			"month,interval_second_login)"
+
+		if daycnt == 0 {
+			sql += fmt.Sprintf("SELECT '%s','%s','%s',1,0,0,0,0,0,0,0,0,0 ON DUPLICATE KEY UPDATE first=first+1", last_day, MyUtility.GetMapRetString(dmsg, "dbid", ""), channel)
+		} else if daycnt == 1 {
+			sql += fmt.Sprintf("SELECT '%s','%s','%s',0,1,0,0,0,0,0,0,0,0 ON DUPLICATE KEY UPDATE second=second+1", last_day, MyUtility.GetMapRetString(dmsg, "dbid", ""), channel)
+		} else if daycnt == 2 {
+			sql += fmt.Sprintf("SELECT '%s','%s','%s',0,0,1,0,0,0,0,0,0,0 ON DUPLICATE KEY UPDATE third=third+1", last_day, MyUtility.GetMapRetString(dmsg, "dbid", ""), channel)
+		} else if daycnt == 3 {
+			sql += fmt.Sprintf("SELECT '%s','%s','%s',0,0,0,1,0,0,0,0,0,0 ON DUPLICATE KEY UPDATE fourth=fourth+1", last_day, MyUtility.GetMapRetString(dmsg, "dbid", ""), channel)
+		} else if daycnt == 4 {
+			sql += fmt.Sprintf("SELECT '%s','%s','%s',0,0,0,0,1,0,0,0,0,0 ON DUPLICATE KEY UPDATE fifth=fifth+1", last_day, MyUtility.GetMapRetString(dmsg, "dbid", ""), channel)
+		} else if daycnt == 5 {
+			sql += fmt.Sprintf("SELECT '%s','%s','%s',0,0,0,0,0,1,0,0,0,0 ON DUPLICATE KEY UPDATE sixth=sixth+1", last_day, MyUtility.GetMapRetString(dmsg, "dbid", ""), channel)
+		} else if daycnt == 6 {
+			sql += fmt.Sprintf("SELECT '%s','%s','%s',0,0,0,0,0,0,1,0,0,0 ON DUPLICATE KEY UPDATE week=week+1", last_day, MyUtility.GetMapRetString(dmsg, "dbid", ""), channel)
+		} else if daycnt < 15 {
+			sql += fmt.Sprintf("SELECT '%s','%s','%s',0,0,0,0,0,0,0,1,0,0 ON DUPLICATE KEY UPDATE halfmonth=halfmonth+1", last_day, MyUtility.GetMapRetString(dmsg, "dbid", ""), channel)
+		} else if daycnt < 30 {
+			sql += fmt.Sprintf("SELECT '%s','%s','%s',0,0,0,0,0,0,0,0,1,0 ON DUPLICATE KEY UPDATE month=month+1", last_day, MyUtility.GetMapRetString(dmsg, "dbid", ""), channel)
+		} else {
+			sql = ""
+		}
+
+		if len(sql) > 0 {
+			mysqldb.QueryDB(sql)
+		}
+
+		if len(rowValue_firstdate) > 0 && strings.EqualFold(rowValue_firstdate, rowValue_lastdate) {
+			sql = fmt.Sprintf("INSERT INTO log_retention_users(daytime,dbid,cid,"+
+				"first,second,third,fourth, fifth, sixth, week"+
+				",halfmonth,month,interval_second_login)"+
+				"SELECT '%s','%s','%s',0,0,0,0,0,0,0,0,0,1 "+
+				"ON DUPLICATE KEY UPDATE interval_second_login=interval_second_login+1", last_day,
+				MyUtility.GetMapRetString(dmsg, "dbid", ""), channel)
+			mysqldb.ExecDB(sql)
+		}
+
+	} else {
+		sql = "UPDATE log_retention_users SET cnt = cnt + 1 WHERE username='" + MyUtility.GetMapRetString(dmsg, "username", "") + "'"
+		mysqldb.ExecDB(sql)
+	}
+
+	// log.Println("lastValue:", lastValue, ",last:", last, ",last_day:", last_day)
+	// log.Println("firstValue:", firstValue, ",first:", first, ",first_day:", first_day)
+
 }
 
 func log_save(records []string) {
@@ -39,20 +167,8 @@ func log_save(records []string) {
 		return
 	}
 
-	//对python传过来的数据处理下
-	needToJson := strings.TrimSpace(records[6])
-	needToJson = strings.Replace(needToJson, "'", "\"", -1)
-	needToJson = strings.Replace(needToJson, "u\"", "", -1)
-	// log.Println("needToJson=", needToJson)
+	data, _ := MyUtility.DealJsonFormat(records[6])
 
-	data := make(map[string]interface{})
-	error := json.Unmarshal([]byte(needToJson), &data)
-	if error != nil {
-		log.Println("log_save error:", error)
-		log.Println("err needToJson:", needToJson)
-	} else {
-		log.Println("first deal data:", data)
-	}
 	day_time := strings.Split(strings.TrimSpace(records[1]), ",")[0]
 	user_id := strings.Split(strings.TrimSpace(records[4]), ":")[1]
 	var channel string = ""
@@ -65,7 +181,7 @@ func log_save(records []string) {
 	if len(user_id) <= 0 {
 		user_id = "0"
 	}
-	date := strings.Replace(day_time, "-", "", -1)
+	// date := strings.Replace(day_time, "-", "", -1)
 
 	//开始数据分析啦
 
@@ -111,7 +227,7 @@ func log_save(records []string) {
 			for k, v := range tempCloth {
 				// log.Println("k:", k)
 				// log.Println("v:", v)
-				num := MyUtility.GetMapRetInt(v.(map[string]interface{}), "num", 0)
+				num := int(MyUtility.GetMapRetInt(v.(map[string]interface{}), "num", 0))
 				// log.Println("num:", num)
 				cloth_id, err := strconv.Atoi(k)
 				if err == nil {
@@ -180,23 +296,23 @@ func log_save(records []string) {
 	if len(colums) > 0 {
 		prepare := fmt.Sprintf("INSERT INTO log_%s (%s)VALUES ('%s')", "dialy", colums, values)
 
-		mysqldb.QueryDB(prepare)
+		mysqldb.ExecDB(prepare)
 	}
 
-	log.Println("after filter data:", data)
-	log.Println("day_time:", day_time)
-	log.Println("date:", date)
-	log.Println("user_id:", user_id)
-	log.Println("channel:", channel)
-	log.Println("cloth:", cloth)
-	log.Println("prop:", prop)
-	log.Println("colums:", colums)
-	log.Println("values:", values)
+	// log.Println("after filter data:", data)
+	// log.Println("day_time:", day_time)
+	// log.Println("date:", date)
+	// log.Println("user_id:", user_id)
+	// log.Println("channel:", channel)
+	// log.Println("cloth:", cloth)
+	// log.Println("prop:", prop)
+	// log.Println("colums:", colums)
+	// log.Println("values:", values)
 
 	max_Len := MyUtility.GetIntMax(attrs_len, cloth_len, prop_len)
 
 	if max_Len > 1 {
-		log.Println("|||||||||||||---------------------||||||||||||")
+		// log.Println("|||||||||||||---------------------||||||||||||")
 		rest_prop := make([]string, max_Len-prop_len)
 		rest_cloth := make([]string, max_Len-cloth_len)
 		rest_attrs := make([]string, max_Len-attrs_len)
@@ -205,9 +321,9 @@ func log_save(records []string) {
 		cloth = append(cloth, rest_cloth...)
 		attrs = append(attrs, rest_attrs...)
 
-		log.Println("prop:", prop)
-		log.Println("cloth:", cloth)
-		log.Println("attrs:", attrs)
+		// log.Println("prop:", prop)
+		// log.Println("cloth:", cloth)
+		// log.Println("attrs:", attrs)
 
 		rest_values := make([]string, max_Len-1)
 		for i := 0; i < max_Len-1; i++ {
@@ -224,18 +340,17 @@ func log_save(records []string) {
 				finalCloth = "0"
 			}
 			tmp := fmt.Sprintf("%s','%s','%s", finalAttrs, finalProp, finalCloth)
-			log.Println("tmp[a]:", i, "=", tmp)
+			// log.Println("tmp[a]:", i, "=", tmp)
 			rest_values[i] = tmp
 		}
-		// rest_values = strings.Join(rest_values, ",")
-		log.Println("rest_values:", rest_values)
+		// log.Println("rest_values:", rest_values)
 		rest_columns := append(pre_columns, "attr", "prop", "cloth", "other")
 		values_sql := "'"
 
 		for k, v := range rest_values {
 			tmp := strings.Join(append(pre_values, v), "','") + "','" + MyUtility.GetMapRetString(data, "other", "")
-			log.Println("k:", k, ",v:", v)
-			log.Println("tmp[b]:", tmp)
+			// log.Println("k:", k, ",v:", v)
+			// log.Println("tmp[b]:", tmp)
 			if k == len(rest_values)-1 {
 				values_sql += tmp + "'"
 			} else {
@@ -244,7 +359,7 @@ func log_save(records []string) {
 		}
 		rest_sql := fmt.Sprintf("INSERT INTO log_%s (%s)VALUES (%s)", "dialy", strings.Join(rest_columns, ","), values_sql)
 
-		mysqldb.QueryDB(rest_sql)
+		mysqldb.ExecDB(rest_sql)
 	}
 
 	log.Println("----------------------------------------------------")
@@ -258,12 +373,35 @@ func (self *MySqlDb) connectDB() *sql.DB {
 	return db
 }
 
-func (self *MySqlDb) QueryDB(prepare string, exec ...string) {
+func (self *MySqlDb) QueryDB(prepare string) *sql.Rows {
 
 	dbInstance := self.connectDB()
 
 	if dbInstance == nil {
-		return
+		return nil
+	}
+
+	defer func() {
+		dbInstance.Close()
+		dbInstance = nil
+	}()
+
+	log.Println("prepare:", prepare)
+	res, err := dbInstance.Query(prepare)
+	checkError(err)
+	return res
+	// id, err := res.LastInsertId()
+	// log.Println("QueryDB LastInsertId:", id)
+	// checkError(err)
+
+}
+
+func (self *MySqlDb) ExecDB(prepare string) sql.Result {
+
+	dbInstance := self.connectDB()
+
+	if dbInstance == nil {
+		return nil
 	}
 
 	defer func() {
@@ -274,9 +412,10 @@ func (self *MySqlDb) QueryDB(prepare string, exec ...string) {
 	log.Println("prepare:", prepare)
 	res, err := dbInstance.Exec(prepare)
 	checkError(err)
-	id, err := res.LastInsertId()
-	log.Println("QueryDB LastInsertId:", id)
-	checkError(err)
+	return res
+	// id, err := res.LastInsertId()
+	// log.Println("QueryDB LastInsertId:", id)
+	// checkError(err)
 
 }
 

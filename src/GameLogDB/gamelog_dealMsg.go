@@ -165,13 +165,6 @@ func Run(msg chan Message) {
 
 }
 
-func DataFromSocket(msg string) {
-
-	dataStruct := Message{logData: msg, channel: make(chan byte)}
-
-	go dispatchLog(dataStruct)
-}
-
 //按照规则切割流里的数据内容
 func dispatchLog(data Message) {
 	message := data.logData
@@ -195,10 +188,10 @@ func dispatchLog(data Message) {
 			return
 		}
 		if strings.Contains(records[5], "remain_record") && len(records) >= 7 {
-			// self.login_msg(record)
+			login_msg(records)
 		} else if strings.Contains(records[5], "recharge_successful") && len(records) >= 7 {
-			// self.recharge_msg(record)
-			// self.log_save(record)
+			recharge_msg(records)
+			log_save(records)
 		} else if strings.Contains(records[5], "poll") && len(records) >= 7 {
 		} else {
 			log_save(records)
