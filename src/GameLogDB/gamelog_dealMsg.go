@@ -1,7 +1,7 @@
 package GameLogDB
 
 import (
-	// "fmt"
+	"fmt"
 	// "log"
 	"math/rand"
 	"strings"
@@ -171,6 +171,8 @@ func dispatchLog(data Message) {
 	finalStr := strings.TrimSpace(message)
 	// finalStr = stri  ngs.Replace(finalStr, "\t", "9998", -1)
 
+	content := fmt.Sprintf("socket[%d],dispatchLog[%d]=%s\r\n", data.socketid, data.chanid, finalStr)
+	RecordGameLog(content)
 	// log.Printf("socket[%d],dispatchLog[%d]=%s\r\n", data.socketid, data.chanid, finalStr)
 	// log.Println("")
 
@@ -196,6 +198,8 @@ func dispatchLog(data Message) {
 		} else {
 			log_save(records)
 		}
+
+		//丢数据魔方
 
 	} else if strings.HasPrefix(finalStr, "ERROR") {
 

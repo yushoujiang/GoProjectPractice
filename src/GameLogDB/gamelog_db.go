@@ -152,7 +152,8 @@ func login_msg(records []string) {
 		}
 
 	} else {
-		sql = "UPDATE log_retention_users SET cnt = cnt + 1 WHERE username='" + MyUtility.GetMapRetString(dmsg, "username", "") + "'"
+		sql = "UPDATE log_users_login SET cnt = cnt + 1 WHERE username='" + MyUtility.GetMapRetString(dmsg, "username", "") + "'"
+		// log.Println("9999_sql:",sql)
 		mysqldb.ExecDB(sql)
 	}
 
@@ -242,6 +243,7 @@ func log_save(records []string) {
 				data["cloth"] = cloth[cloth_len-1]
 				cloth = cloth[:cloth_len-1]
 			}
+
 		}
 	}
 
